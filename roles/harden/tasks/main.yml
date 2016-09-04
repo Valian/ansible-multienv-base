@@ -1,1 +1,49 @@
+---
 
+- name: add ubuntu user
+  user: name=ubuntu password="{{ ubuntu_password_crypted }}" shell=/bin/bash
+
+- name: Remove sudo group rights
+  lineinfile: dest=/etc/sudoers regexp="^%sudo" state=absent
+
+- name: Add ubuntu user sudo rights
+  lineinfile: dest=/etc/sudoers regexp="ubuntu ALL" line="ubuntu ALL=(ALL) ALL" state=present
+
+- name: update and upgrade apt-get
+  apt: update_cache=yes upgrade=full
+
+- name: Install security packages
+  apt: pkg="{{ item}}" state=present
+  with_items:
+    - ufw
+    - fail2ban
+    - unattended-upgrades
+
+- name: Install optional packages
+  apt: pkg="{{ item}}" state=present
+  with_items:
+    - vim
+
+- name: Adjust APT update intervals
+  copy: src=apt_periodic dest=/etc/apt/apt.conf.d/10periodic
+
+- name: allow ssh on ufw
+  ufw: rule=allow name=OpenSSH
+
+- name: policy - deny
+  ufw: policy=deny
+
+- name: enable ufw
+  ufw: state=enabled
+
+- name: add authorized_keys for ubuntu user
+  authorized_key: user=ubuntu key="{{ item }}"
+  with_file: keys
+
+- name: Disallow root SSH access
+  action: lineinfile dest=/etc/ssh/sshd_config regexp="^PermitRootLogin" line="PermitRootLogin no" state=present
+  notify: restart sshd
+
+- name: Disallow password authentication
+  action: lineinfile dest=/etc/ssh/sshd_config regexp="^PasswordAuthentication" line="PasswordAuthentication no" state=present
+  notify: restart sshd
