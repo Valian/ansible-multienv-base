@@ -13,7 +13,7 @@
   apt: update_cache=yes upgrade=full
 
 - name: Install security packages
-  apt: pkg="{{ item}}" state=present
+  apt: pkg="{{ item }}" state=present
   with_items:
     - ufw
     - fail2ban
